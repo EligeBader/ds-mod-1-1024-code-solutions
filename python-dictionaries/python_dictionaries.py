@@ -10,8 +10,16 @@ Original file is located at
 def decimal_to_binary(start, end):
   binary_dict = {}
   for i in range(start, end + 1):
-    binary_num = bin(i)[2:].zfill(4)  # Convert to binary, remove "0b" prefix, pad with zeros
-    binary_dict[i] = binary_num
+    temp = i
+    string1 = ""
+    if i == 0:
+      binary_dict[i] = "0000"
+      continue
+    while temp > 0:
+      remainder = temp % 2
+      string1 += str(remainder)
+      temp //= 2
+    binary_dict[i] = string1[::-1].rjust(4, '0')
   return binary_dict
 
-decimal_to_binary(0, 15)
+print(decimal_to_binary(0, 15))
