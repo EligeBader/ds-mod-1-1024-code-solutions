@@ -48,12 +48,12 @@ df5
 
 """#U.data file"""
 
-df6 = pd.read_csv('u.data', sep='\t')
+df6 = pd.read_csv('u.data', sep='\t', header = None)
 df6
 
 df6.to_csv('N_u.data', sep='\t', index=False)
 
-df7 = pd.read_csv('N_u.data', sep='\t')
+df7 = pd.read_csv('N_u.data', sep='\t', header = None)
 df7
 
 comparison_result = df6.equals(df7)
@@ -61,12 +61,12 @@ comparison_result
 
 """#u.item file"""
 
-df8 = pd.read_csv('u.item', sep ='|', encoding='latin-1')
+df8 = pd.read_csv('u.item', sep ='|', encoding='latin-1', header = None)
 df8
 
 df8.to_csv('N_u.items', sep ='|', index=False)
 
-df9 = pd.read_csv('N_u.items', sep ='|')
+df9 = pd.read_csv('N_u.items', sep ='|', header = None)
 df9
 
 comparison_result = df8.equals(df9)
@@ -85,15 +85,15 @@ def read_files(fileName):
         elif fileName.endswith('.txt'):
             df = pd.read_csv(fileName, sep=' ')
         elif fileName.endswith('.data'):
-            df = pd.read_csv(fileName, sep='\t')
+            df = pd.read_csv(fileName, sep='\t', header= None)
         elif fileName.endswith('.item'):
-            df = pd.read_csv(fileName, sep='|', encoding='latin-1')
+            df = pd.read_csv(fileName, sep='|', encoding='latin-1', header= None)
         else:
             print('Unsupported file format')
             return None
         return df
 
-read_files('u.item')
+read_files('u.data')
 
 """- using try, except"""
 
@@ -106,9 +106,9 @@ def read_all_files(fileName):
         elif fileName.endswith('.txt'):
             df = pd.read_csv(fileName, sep=' ')
         elif fileName.endswith('.data'):
-            df = pd.read_csv(fileName, sep='\t')
+            df = pd.read_csv(fileName, sep='\t', header= None)
         elif fileName.endswith('.item'):
-            df = pd.read_csv(fileName, sep='|', encoding='latin-1')
+            df = pd.read_csv(fileName, sep='|', encoding='latin-1', header= None)
         else:
             print('Unsupported file format')
             return None
