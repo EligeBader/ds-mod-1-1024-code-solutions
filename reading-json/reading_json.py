@@ -15,10 +15,9 @@ with open("json_file.txt", "r") as f:
 json_f
 
 for i in json_f:
-    print(f"id: {i['id']}")
-    print(f"name: {i['name']}")
-    print(f"sports: {i['sports']}")
-    print(f"==================")
+  for key, value in i.items():
+    print(f'{key} : {value}')
+  print("=================")
 
 with open("daily_covid_cases.json", "r") as f:
   covid_json_f = json.load(f)
