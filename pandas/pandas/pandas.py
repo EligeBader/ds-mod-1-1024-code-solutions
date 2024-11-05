@@ -39,13 +39,13 @@ loans['loan_status'].value_counts()
 
 loans['City'].value_counts()
 
-"""8. Display only the 201st row
+"""8. Display only the 20 1st row
 
 
 
 """
 
-loans.iloc[:201]
+loans.iloc[200]
 
 """9. Display only the education column"""
 
@@ -76,6 +76,10 @@ loans[loans['Gender'] == 'female']
 """# 15. Display only the rows where education is college And City in NYC"""
 
 loans[(loans['education'] == 'college') & (loans['City'] == 'NYC')]
+#compound conditions
+# loans['education'] is a series
+# loans['education'] == 'college' return a series of boolean
+# we can put & whenever we hv boolean values True & True or False & True etc...
 
 """# 16. Display only the rows where age is larger than 32"""
 
@@ -84,3 +88,5 @@ loans[loans['age'] > 32]
 """# 17. Display the rows where there is a past-due of larger than a week and only display the due_date and past_due_days columns"""
 
 loans[loans['past_due_days'] > 7][['due_date', 'past_due_days']]
+
+loans.loc[loans['past_due_days'] > 7, ['due_date', 'past_due_days']]
