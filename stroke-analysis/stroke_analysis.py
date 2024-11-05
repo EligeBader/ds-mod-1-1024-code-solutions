@@ -45,9 +45,9 @@ factors_df
 
 factors_df.get_group((1,1)) #get_group(tuple)
 
-"""# Count the number of "id"s per group."""
+"""# Count the number of unique "id"s per group."""
 
-factors_df['id'].count()
+factors_df['id'].nunique()
 
 """# Aggregate both the mean and standard deviation of "stroke" per group."""
 
