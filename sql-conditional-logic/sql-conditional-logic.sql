@@ -30,10 +30,12 @@ GROUP BY
   volume_1;
   
  /* Hourly Rate */
+use hr;
+
 SELECT EmployeeNumber, HourlyRate, 
 		CASE 
 			WHEN HourlyRate < 40 Then "low hourly rate"
-			WHEN HourlyRate > 80 THEN "high hourly rate"
+			WHEN HourlyRate >= 80 THEN "high hourly rate"
 			ELSE "medium hourly rate"
 		END HourlyRate_1
 FROM employee;
