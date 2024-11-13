@@ -1,12 +1,13 @@
 
 use loandb;
 
+
 /* 1. Create a temp table to store the row quantity of each table in “loandb” and the temp table includes 2 columns,
  * one is “table_name” and the other is “row_quantity.” Show the table in the end. After take a screenshot of the result, then, drop the table.*/
 
 show tables from loandb;
-
-
+ 
+ 
 CREATE TEMPORARY TABLE dsstudent.row_quantities
 (
   table_name VARCHAR(50),
@@ -14,18 +15,18 @@ CREATE TEMPORARY TABLE dsstudent.row_quantities
 );
 
 INSERT INTO dsstudent.row_quantities (table_name, table_rows)
-SELECT 'bureau', COUNT(*) FROM loandb.`bureau`
-UNION ALL
+SELECT 'bureau', COUNT(*) FROM loandb.bureau
+UNION 
 SELECT 'bureau_balance', COUNT(*) FROM loandb.bureau_balance
-UNION ALL
+UNION 
 SELECT 'credit_card_balance', COUNT(*) FROM loandb.credit_card_balance
-UNION ALL
+UNION 
 SELECT 'installments_payments', COUNT(*) FROM loandb.installments_payments
-UNION ALL
+UNION 
 SELECT 'previous_application', COUNT(*) FROM loandb.previous_application
-UNION ALL
+UNION 
 SELECT 'train', COUNT(*) FROM loandb.train
-UNION ALL
+UNION 
 SELECT 'POS_CASH_balance', COUNT(*) FROM loandb.POS_CASH_balance ;
 
  
@@ -40,14 +41,20 @@ Select
 	AMT_INCOME_TOTAL annual_income, AMT_INCOME_TOTAL/12 monthly_income 
 from train;
 
-
-/* Transform the “DAYS_BIRTH” column by dividing “-365” and round the value to the integer place. Call this column as “age.” */
-SELECT ROUND(DAYS_BIRTH/(-365)) age FROM train;
  
+/* Transform the “DAYS_BIRTH” column by dividing “-365” and round the value to the integer place. Call this column as “age.” */
+SELECT ROUND(DAYS_BIRTH/(-365)) age 
+FROM
+	train
+WHERE 
+  DAYS_BIRTH IS NOT NULL;
+
+
 /* Show the quantity of each occupation type and sort the quantity in descending orde*/
 SELECT
 	OCCUPATION_TYPE, COUNT(*) quantity
-FROM train
+FROM 
+	train
 GROUP BY OCCUPATION_TYPE;
 
 /*In the field “DAYS_EMPLOYED”, the maximum value in this field is bad data, can you write a conditional logic to mark these bad data as “bad data”,
@@ -67,7 +74,7 @@ Describe  credit_card_balance;
 Describe  previous_application;
 Describe train;
 
-
+ 
 SELECT 
   t.TARGET TARGET,
   MIN(ip.DAYS_INSTALMENT) min_days_installment,
@@ -76,6 +83,10 @@ SELECT
   MAX(ip.DAYS_ENTRY_PAYMENT) max_days_entry_payment
 FROM 
   installments_payments ip
+INNER JOIN 
+  credit_card_balance ccb ON ip.SK_ID_PREV = ccb.SK_ID_PREV 
+INNER JOIN 
+  previous_application pa ON ip.SK_ID_PREV = pa.SK_ID_PREV
 INNER JOIN 
   train t ON ip.SK_ID_CURR = t.SK_ID_CURR
 GROUP BY 
