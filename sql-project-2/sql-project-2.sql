@@ -45,9 +45,7 @@ from train;
 /* Transform the “DAYS_BIRTH” column by dividing “-365” and round the value to the integer place. Call this column as “age.” */
 SELECT ROUND(DAYS_BIRTH/(-365)) age 
 FROM
-	train
-WHERE 
-  DAYS_BIRTH IS NOT NULL;
+	train;
 
 
 /* Show the quantity of each occupation type and sort the quantity in descending orde*/
@@ -55,7 +53,9 @@ SELECT
 	OCCUPATION_TYPE, COUNT(*) quantity
 FROM 
 	train
-GROUP BY OCCUPATION_TYPE;
+GROUP BY OCCUPATION_TYPE
+Having OCCUPATION_TYPE IS NOT NULL
+ORDER BY quantity DESC;
 
 /*In the field “DAYS_EMPLOYED”, the maximum value in this field is bad data, can you write a conditional logic to mark these bad data as “bad data”,
  *and other values are “normal data” in a new field called “Flag_for_bad_data”? */
