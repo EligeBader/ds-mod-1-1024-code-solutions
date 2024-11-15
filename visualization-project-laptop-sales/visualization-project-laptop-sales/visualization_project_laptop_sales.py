@@ -18,11 +18,11 @@ sales.info()
 
 """# What is target market? Male or female?
 
-## OBSERVATION: Female is the target market resulting of a higher profit for the company and a higher confidence interval.
+## OBSERVATION: Male is the target market resulting of a higher profit for the company and a higher confidence interval.
 """
 
-sns.barplot(x='Contact Sex', y='Profit', data=sales);
-plt.title("Profit by Gender");
+sns.barplot(x='Contact Sex', y='Profit', data=sales, estimator = 'sum');
+plt.title("Profit by Gender"); # x axe should be categorical - sum aggregate the y and sum it - what is the measure of y for each group - sum(profit) made by male or female.
 
 """# If business is cash-constrained, which gender should be targeted?
 ## Hint: business being cash-constrained means cost to business should be considered (consider shipping cost)
@@ -33,8 +33,16 @@ plt.title("Profit by Gender");
 
 sales['Total Cost'] = sales['Our Cost'] + sales['Shipping Cost']
 
-sns.barplot(x='Contact Sex', y='Total Cost', data = sales);
-plt.title("Cost by Gender");
+cost_profit_by_gender = sales.groupby('Contact Sex').agg({'Total Cost': 'sum', 'Profit': 'sum'})
+
+cost_profit_by_gender['Cost per Profit'] = cost_profit_by_gender['Total Cost'] / cost_profit_by_gender['Profit'] #Focus on cost efficiency.
+
+
+
+sns.barplot(x=cost_profit_by_gender.index, y='Cost per Profit', data=cost_profit_by_gender);
+plt.title("Cost per unit of profit by gender");
+plt.xlabel("Gender");
+plt.ylabel("Cost per unit of profit");
 
 """# If consumer is cash-constrained, which gender should be targeted?
 ## Hint: consumer being cash-constrained means cost to consumer should be considered
@@ -42,40 +50,47 @@ plt.title("Cost by Gender");
 ### Observation:  Males should be targeted having a sale price less than females, as when consumer is cash constrained they prioritize affordability having a limited budget.
 """
 
-sns.barplot(x='Contact Sex', y='Sale Price', data = sales);
-plt.title("Cost by Gender");
+sales['Total Consumer Cost'] = sales['Sale Price'] + sales['Shipping Cost']
+
+consumer_cost_by_gender = sales.groupby('Contact Sex')['Total Consumer Cost'].sum();
+
+
+sns.barplot(x=consumer_cost_by_gender.index, y=consumer_cost_by_gender.values)
+plt.title("Consumer Cost by Gender")
+plt.xlabel("Gender")
+plt.ylabel("Consumer Cost");
 
 """# What is our target age to maximize profit?
 ## Hint: consider individual ages and age ranges
 
 
 
-### OBSERVATION: target age range is between 50 - 60 precisely 54
+### OBSERVATION: target age range is between 50 - 60 / individual target: 46
 """
 
-sns.barplot(x= 'Contact Age', y= 'Profit',data = sales);
+sns.barplot(x= 'Contact Age', y= 'Profit',data = sales, estimator='sum');
 plt.title('Profit by Age Group')
 plt.xlabel('Age Group')
 plt.ylabel('Profit');
 
 sales['Age Group'] = pd.cut(sales['Contact Age'], bins=[20, 30, 40, 50,60] , labels=['20 - 30', '30 - 40', '40 - 50', '50 - 60'])
 
-age_group_profit = sales.groupby('Age Group', observed = False)['Profit'].mean()
+age_group_profit = sales.groupby('Age Group', observed = False)['Profit'].sum()
 
 
 sns.barplot(x=age_group_profit.index, y=age_group_profit.values);
-plt.title('Average Profit by Age Group')
+plt.title('Sum Profit by Age Group')
 plt.xlabel('Age Group')
-plt.ylabel('Average Profit');
+plt.ylabel('Sum Profit');
 
 """#Which product should we feature?
 ## Hint: consider profit
 
 
-### OBSERVATION:  Desktop because the company is getting the highest profit while selling it.
+### OBSERVATION:  Laptop because the company is getting the highest profit by selling it.
 """
 
-sns.barplot(x='Product Type', y='Profit', data = sales);
+sns.barplot(x='Product Type', y='Profit', data = sales, estimator = 'sum');
 plt.title("Profit by Product Type");
 
 """# What lead sources have worked in the past: website, flyer, or email?
@@ -84,7 +99,7 @@ plt.title("Profit by Product Type");
 ### OBSERVATION: Flyers
 """
 
-sns.barplot(x='Lead Source', y='Profit', data = sales);
+sns.barplot(x='Lead Source', y='Profit', data = sales, estimator = 'sum');
 plt.title("Profit by Lead Source");
 
 sales['Lead Source'] = sales['Lead Source'].replace({'Flyer 1': 'Flyer', 'Flyer 2': 'Flyer', 'Flyer 3': 'Flyer', 'Flyer 4': 'Flyer'})
@@ -92,10 +107,10 @@ sales['Lead Source'] = sales['Lead Source'].replace({'Flyer 1': 'Flyer', 'Flyer 
 lead_source_profit = sales.groupby('Lead Source')['Profit'].mean()
 
 
-sns.barplot(x=lead_source_profit.index, y=lead_source_profit.values);
-plt.title('Average Profit by Lead Source');
+sns.barplot(x=lead_source_profit.index, y=lead_source_profit.values, estimator = 'sum');
+plt.title('Sum Profit by Lead Source');
 plt.xlabel('Lead Source');
-plt.ylabel('Average Profit');
+plt.ylabel('Sum Profit');
 
 """#When is the best time to do email marketing?
 
@@ -108,7 +123,7 @@ email
 monthly_email = email['Sale Month'].value_counts()
 monthly_email
 
-sns.barplot(x = monthly_email.index, y = monthly_email.values);
+sns.barplot(x = monthly_email.index, y = monthly_email.values, estimator = 'sum');
 plt.title('Email Leads by Month');
 plt.xlabel('Month');
 plt.ylabel('Number of Leads');
