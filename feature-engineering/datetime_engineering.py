@@ -33,7 +33,7 @@ def create_month(df: pd.DataFrame, feature: str, name: str) -> pd.DataFrame:
     """
 
     # TODO: Implement this function
-    df['Month'] = df[feature].dt.month
+    df[name] = df[feature].dt.month
     return df
 
 
