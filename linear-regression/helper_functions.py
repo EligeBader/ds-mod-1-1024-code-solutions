@@ -253,7 +253,7 @@ def backward_stepwise_train(X_train, y_train, feature_cols):
 
     # split the data into training and validation sets (xtrain, xval, ytrain, yval)
     # use test size 0.2 and random state 1
-    xtrain, xval, ytrain, yval = train_test_split(X_train, y_train, test_size=0.2, random_state=1)
+    xtrain, xval, ytrain, yval = train_test_split(X_train[feature_cols], y_train, test_size=0.2, random_state=1)
 
 
 
@@ -397,7 +397,7 @@ def build_lasso_model(X_train, y_train, alpha):
 
     # Calculate RMSE based on number of non-zero coefficients
     sse = np.sum((preds - yval) ** 2)
-    rmse = np.sqrt(sse / n)
+    rmse = np.sqrt(sse / n - p)
 
     # Return model coefficients and RMSE
     return model.coef_, rmse
