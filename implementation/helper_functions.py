@@ -118,8 +118,8 @@ def transform_data(df, target):
         with open(file_name, 'rb') as f:
             pt = dill.load(f)
 
-        pt = PowerTransformer(method='yeo-johnson')
-        pt.fit(df[target].values.reshape(-1,1))
+        yj_target = pt.transform(df[target].values.reshape(-1,1))
+        df['transform_target'] = yj_target
     
     else:
         pt = PowerTransformer(method='yeo-johnson')
@@ -158,7 +158,7 @@ def predict_model(df, model, features = []):
     y_new_pred = model.predict(X_new)
 
 
-    print(f"Model's raw prediction: {y_new_pred}")
+    # print(f"Model's raw prediction: {y_new_pred}")
 
     if os.path.exists(file_name):
         with open(file_name, 'rb') as f:
@@ -178,12 +178,13 @@ def predict_model(df, model, features = []):
             print("Loaded transformer does not have the inverse_transform method.")
 
     
-    print(f"Predictions after inverse transform (if applicable):{y_new_pred}")
+    # print(f"Predictions after inverse transform (if applicable):{y_new_pred}")
 
     return y_new_pred
 
 
 with open('predict_model.pickle', 'wb') as f:
     dill.dump(predict_model, f) 
+
 
 
