@@ -25,9 +25,18 @@ with open('read_file.pickle', 'wb') as f:
     dill.dump(load_data, f)
 
 # %%
-def split_data(df, target, feature_selected= None, features =[]):
+def drop_features(df, features_to_drop=[]):
+    df = df.drop(columns=features_to_drop)
+
+    return df
+
+with open('drop_features.pickle', 'wb') as f:
+    dill.dump(drop_features, f)
+
+# %%
+def split_data(df, target,target_dropped, feature_selected= None):
     if feature_selected == None:
-        X = df.drop(columns= [target] + features)
+        X = df.drop(columns= [target] + target_dropped)
         y = df[target]
 
     else:
@@ -44,25 +53,71 @@ with open('split_data.pickle', 'wb') as f:
     dill.dump(split_data, f)
 
 # %%
-def clean_data(df):
+def clean_data(df, train=True, target= [], feature_names=None):
     #Use SimpleImputer
+    numeric_imputer_file = 'numeric_imputer.pickle' 
+    categorical_imputer_file = 'categorical_imputer.pickle'
 
-    #Check Columns having nulls
-    nulls_col = df.columns[df.isnull().sum() > 0]
-    nulls_col  = list(nulls_col)
-
-
+    
     # Separate numeric and categorical features
-    numeric_features = [feat for feat in nulls_col if df[feat].dtype.kind in 'bifc']
-    categorical_features = [feat for feat in nulls_col if feat not in numeric_features]
+    numeric_features = df.drop(columns=target).select_dtypes(exclude=object).columns.tolist()
+    categorical_features = df.select_dtypes(include=object).columns.tolist()
+    
+    
 
-    # Impute missing values for numeric features
-    numeric_imputer = SimpleImputer(strategy='median')
-    df[numeric_features] = numeric_imputer.fit_transform(df[numeric_features])
+    if train:
 
-    # Impute missing values for categorical features    
-    categorical_imputer = SimpleImputer(strategy='most_frequent')
-    df[categorical_features] = categorical_imputer.fit_transform(df[categorical_features])
+        if numeric_features:
+            # Impute missing values for numeric features
+            numeric_imputer = SimpleImputer(strategy='median')
+            numeric_imputer.fit(df[numeric_features])
+            df[numeric_features] = numeric_imputer.transform(df[numeric_features])
+
+            with open(numeric_imputer_file, 'wb') as f: 
+                dill.dump(numeric_imputer,f)
+
+            # print(numeric_features)
+
+        if categorical_features:
+            # Impute missing values for categorical features    
+            categorical_imputer = SimpleImputer(strategy='most_frequent')
+            categorical_imputer.fit(df[categorical_features])
+            df[categorical_features] = categorical_imputer.transform(df[categorical_features])
+
+            feature_names = df.columns.tolist()
+            with open(categorical_imputer_file, 'wb') as f: 
+                dill.dump(categorical_imputer,f)
+
+    else:
+        
+        if os.path.exists('feature_names.pickle'): 
+            with open('feature_names.pickle', 'rb') as f: 
+                feature_names = dill.load(f)
+                
+
+            for feature in feature_names: 
+                if feature not in df.columns: 
+                    df[feature] = 0
+
+            df = df[feature_names]
+
+        if numeric_features and os.path.exists(numeric_imputer_file):
+            
+            with open(numeric_imputer_file, 'rb') as f: 
+                numeric_imputer = dill.load(f)
+            # print(numeric_features)
+            # print(numeric_imputer.get_feature_names_out())
+            
+            df[numeric_features] = numeric_imputer.transform(df[numeric_features]) 
+
+            # print(numeric_features)
+
+        if categorical_features and os.path.exists(categorical_imputer_file): 
+
+            with open(categorical_imputer_file, 'rb') as f: 
+                categorical_imputer = dill.load(f) 
+
+            df[categorical_features] = categorical_imputer.transform(df[categorical_features])
 
 
     return df
@@ -73,37 +128,50 @@ with open('clean_data.pickle', 'wb') as f:
     dill.dump(clean_data, f)
 
 # %%
-def encode_data(df, target, categorical_cols, train):
+def encode_data(df, encoding_methods, train, target=[]): # encoding_methods = {'feature1': 'target', 'feature2': 'ordinal'}
+
     file_name = 'trained_data.pickle'
-    if not train: 
+
+    categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
+    encoders = {}
+
+    if train: 
+        # Initialize and fit encoders 
+        for col in categorical_cols: 
+            method = encoding_methods.get(col) 
+            if method == 'target': 
+                encoder = TargetEncoder() 
+                encoder.fit(df[[col]], df[target]) 
+            elif method == 'ordinal': 
+                encoder = OrdinalEncoder() 
+                encoder.fit(df[[col]]) 
+
+            encoders[col] = encoder 
+            df[col] = encoder.transform(df[[col]])
+        
+        with open(file_name, 'wb') as f: 
+            dill.dump(encoders, f)
+
+    else: 
         if os.path.exists(file_name):
+            
             with open(file_name, 'rb') as f:
                 te = dill.load(f)
 
-             # Transform the categorical columns 
-            tempvar = te.transform(df[categorical_cols]) 
-    
-            # Update the original DataFrame with encoded values 
-            for i, col in enumerate(categorical_cols): 
-                df[col] = tempvar[:, i]
 
-    else:
+            # Transform the categorical columns 
+            for col in categorical_cols: 
+                method = encoding_methods.get(col) 
+                encoder = te.get(col) 
+                if encoder: 
+                    if method == 'target': 
+                        df[col] = encoder.transform(df[[col]]) 
+                    elif method == 'ordinal': 
+                        df[col] = encoder.transform(df[[col]])
 
-        # Initialize and fit the TargetEncoder 
-        te = TargetEncoder() 
-        te.fit(df[categorical_cols], df[target]) 
-
+        else: 
+            raise FileNotFoundError(f"Encoders file not found: {file_name}")
         
-        # Transform the categorical columns 
-        tempvar = te.transform(df[categorical_cols]) 
-        
-        # Update the original DataFrame with encoded values 
-        for i, col in enumerate(categorical_cols): 
-            df[col] = tempvar[:, i]
-        
-
-        with open(file_name, 'wb') as f:
-            dill.dump(te, f)
 
     return df
 
@@ -150,15 +218,14 @@ with open('train_model.pickle', 'wb') as f:
     dill.dump(train_model, f)   
 
 # %%
-def predict_model(df, model, features = []):
+def predict_model(df, model):
 
     file_name = "powertransformer.pickle"
+    
+    y_new_pred = model.predict(df)
 
-    X_new = df.drop(columns=features)
-    y_new_pred = model.predict(X_new)
-
-
-    # print(f"Model's raw prediction: {y_new_pred}")
+    
+    print(f"Model's raw prediction: {y_new_pred}")
 
     if os.path.exists(file_name):
         with open(file_name, 'rb') as f:
@@ -170,21 +237,20 @@ def predict_model(df, model, features = []):
                y_new_pred = pt.inverse_transform(y_new_pred.reshape(-1, 1)).flatten() 
                if np.isnan(y_new_pred).any(): 
                     print("Inverse transform produced NaNs. Returning raw predictions.") 
-                    y_new_pred = model.predict(X_new) 
+                    y_new_pred = model.predict(df) 
            except Exception as e: 
                     print(f"Inverse transform failed: {e}") 
-                    y_new_pred = model.predict(X_new)
+                    y_new_pred = model.predict(df)
         else: 
             print("Loaded transformer does not have the inverse_transform method.")
 
     
-    # print(f"Predictions after inverse transform (if applicable):{y_new_pred}")
+    print(f"Predictions after inverse transform (if applicable):{y_new_pred}")
 
     return y_new_pred
 
 
 with open('predict_model.pickle', 'wb') as f:
     dill.dump(predict_model, f) 
-
 
 
