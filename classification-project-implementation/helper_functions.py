@@ -22,8 +22,19 @@ def load_data(file):
 with open('read_file.pickle', 'wb') as f:
     dill.dump(load_data, f)
 
+
+
+def drop_features(df, features_to_drop=[]):
+    df = df.drop(columns=features_to_drop)
+
+    return df
+
+with open('drop_features.pickle', 'wb') as f:
+    dill.dump(drop_features, f)
+
 # %%
 def split_data(df, target, feature_selected= None, features_dropped =[], balanced_data=True):
+
     if balanced_data == True:
         if feature_selected == None:
             X = df.drop(columns= [target] + features_dropped)
@@ -34,6 +45,8 @@ def split_data(df, target, feature_selected= None, features_dropped =[], balance
             y = df[target]
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        
+        return X_train, X_test, y_train, y_test
 
     else:
         if feature_selected == None:
@@ -48,8 +61,7 @@ def split_data(df, target, feature_selected= None, features_dropped =[], balance
         rus = imblearn.under_sampling.RandomUnderSampler()
         xtrain_rus, ytrain_rus = rus.fit_resample(X_train, y_train)
 
-
-    return xtrain_rus, X_test, ytrain_rus, y_test
+        return xtrain_rus, X_test, ytrain_rus, y_test
 
 
 with open('split_data.pickle', 'wb') as f:
@@ -85,15 +97,15 @@ with open('clean_data.pickle', 'wb') as f:
     dill.dump(clean_data, f)
 
 # %%
-def encode_data(df, target, categorical_cols, train):
+def encode_data(df, target, categorical_cols, train, model):
     file_name = 'trained_data.pickle'
     if not train: 
         if os.path.exists(file_name):
             with open(file_name, 'rb') as f:
-                te = dill.load(f)
+                mod = dill.load(f)
 
              # Transform the categorical columns 
-            tempvar = te.transform(df[categorical_cols]) 
+            tempvar = mod.transform(df[categorical_cols]) 
     
             # Update the original DataFrame with encoded values 
             for i, col in enumerate(categorical_cols): 
@@ -102,12 +114,15 @@ def encode_data(df, target, categorical_cols, train):
     else:
 
         # Initialize and fit the TargetEncoder 
-        te = TargetEncoder() 
-        te.fit(df[categorical_cols], df[target]) 
+        mod = model() 
+        if model == TargetEncoder:
+            mod.fit(df[categorical_cols], df[target])
+        else:
+            mod.fit(df[categorical_cols])
 
         
         # Transform the categorical columns 
-        tempvar = te.transform(df[categorical_cols]) 
+        tempvar = mod.transform(df[categorical_cols]) 
         
         # Update the original DataFrame with encoded values 
         for i, col in enumerate(categorical_cols): 
@@ -115,7 +130,7 @@ def encode_data(df, target, categorical_cols, train):
         
 
         with open(file_name, 'wb') as f:
-            dill.dump(te, f)
+            dill.dump(mod, f)
 
     return df
 
@@ -124,16 +139,16 @@ with open('encode_data.pickle', 'wb') as f:
     dill.dump(encode_data, f)
 
 # %%
-def scale_data(df, target=None, features_to_scale=None): 
-    scaler = StandardScaler() 
+def scale_data(df, scaler, target=None, features_to_scale=None): 
+    scal = scaler() 
     if target == None:
         if features_to_scale is None: 
             features_to_scale = df.columns
-            df[features_to_scale] = scaler.fit_transform(df[features_to_scale]) 
+            df[features_to_scale] = scal.fit_transform(df[features_to_scale]) 
     else:
         if features_to_scale is None: 
             features_to_scale = df.drop(columns=target).columns
-            df[features_to_scale] = scaler.fit_transform(df[features_to_scale]) 
+            df[features_to_scale] = scal.fit_transform(df[features_to_scale]) 
 
     
     return df 
@@ -143,8 +158,8 @@ with open('scale_data.pickle', 'wb') as f:
     dill.dump(scale_data, f)
 
 # %%
-def train_model(model_class, xtrain, ytrain, **args):
-    model = model_class(**args)
+def train_model(xtrain, ytrain, model_class, **kwargs):
+    model = model_class(**kwargs)
     model.fit(xtrain, ytrain)
 
     return model
@@ -155,35 +170,11 @@ with open('train_model.pickle', 'wb') as f:
     dill.dump(train_model, f)   
 
 # %%
-def predict_model(df, model, features = []):
+def predict_model(df_test, model, features = []):
 
-    file_name = "powertransformer.pickle"
 
-    X_new = df.drop(columns=features)
+    X_new = df_test.drop(columns=features)
     y_new_pred = model.predict(X_new)
-
-
-    # print(f"Model's raw prediction: {y_new_pred}")
-
-    if os.path.exists(file_name):
-        with open(file_name, 'rb') as f:
-             pt =  pickle.load(f)
-
-
-        if hasattr(pt, 'inverse_transform'): 
-           try: 
-               y_new_pred = pt.inverse_transform(y_new_pred.reshape(-1, 1)).flatten() 
-               if np.isnan(y_new_pred).any(): 
-                    print("Inverse transform produced NaNs. Returning raw predictions.") 
-                    y_new_pred = model.predict(X_new) 
-           except Exception as e: 
-                    print(f"Inverse transform failed: {e}") 
-                    y_new_pred = model.predict(X_new)
-        else: 
-            print("Loaded transformer does not have the inverse_transform method.")
-
-    
-    # print(f"Predictions after inverse transform (if applicable):{y_new_pred}")
 
     return y_new_pred
 
