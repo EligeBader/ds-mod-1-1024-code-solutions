@@ -9,9 +9,11 @@ from scipy.stats import yeojohnson
 import pickle
 from pathlib import Path
 from sklearn.model_selection import train_test_split
-from sklearn.impute import SimpleImputer
+from sklearn.impute import SimpleImputer, KNNImputer
 import dill
 import os
+from sklearn.model_selection import GridSearchCV
+from sklearn.preprocessing import MinMaxScaler, PowerTransformer
 
 # %%
 def load_data(file):
@@ -34,9 +36,9 @@ with open('drop_features.pickle', 'wb') as f:
     dill.dump(drop_features, f)
 
 # %%
-def split_data(df, target,target_dropped, feature_selected= None):
+def split_data(df, target,col_dropped, feature_selected= None):
     if feature_selected == None:
-        X = df.drop(columns= [target] + target_dropped)
+        X = df.drop(columns= [target] + col_dropped)
         y = df[target]
 
     else:
@@ -69,7 +71,7 @@ def clean_data(df, train=True, target= [], feature_names=None):
 
         if numeric_features:
             # Impute missing values for numeric features
-            numeric_imputer = SimpleImputer(strategy='median')
+            numeric_imputer = KNNImputer(n_neighbors = 5)
             numeric_imputer.fit(df[numeric_features])
             df[numeric_features] = numeric_imputer.transform(df[numeric_features])
 
@@ -85,6 +87,7 @@ def clean_data(df, train=True, target= [], feature_names=None):
             df[categorical_features] = categorical_imputer.transform(df[categorical_features])
 
             feature_names = df.columns.tolist()
+            
             with open(categorical_imputer_file, 'wb') as f: 
                 dill.dump(categorical_imputer,f)
 
@@ -127,61 +130,66 @@ def clean_data(df, train=True, target= [], feature_names=None):
 with open('clean_data.pickle', 'wb') as f:
     dill.dump(clean_data, f)
 
+
 # %%
-def encode_data(df, encoding_methods, train, target=[]): # encoding_methods = {'feature1': 'target', 'feature2': 'ordinal'}
-
-    file_name = 'trained_data.pickle'
-
-    categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
-    encoders = {}
-
+def encode_data(df, encoding_methods, train, target=[]): 
+    
+    file_name = 'encoders.pickle' 
+    
+    target_cols = [col for col, method in encoding_methods.items() if method == 'target' and col in df.columns] 
+    ordinal_cols = [col for col, method in encoding_methods.items() if method == 'ordinal' and col in df.columns] 
+    encoders = {} 
+   
     if train: 
-        # Initialize and fit encoders 
-        for col in categorical_cols: 
-            method = encoding_methods.get(col) 
-            if method == 'target': 
-                encoder = TargetEncoder() 
-                encoder.fit(df[[col]], df[target]) 
-            elif method == 'ordinal': 
-                encoder = OrdinalEncoder() 
-                encoder.fit(df[[col]]) 
-
-            encoders[col] = encoder 
-            df[col] = encoder.transform(df[[col]])
         
+        if target_cols: 
+            target_encoder = TargetEncoder() 
+            target_encoder.fit(df[target_cols], df[target]) 
+            encoded_data = target_encoder.transform(df[target_cols]) 
+            for i, col in enumerate(target_cols):
+                df[col] = encoded_data[:, i]
+            encoders['target'] = target_encoder
+          
+        if ordinal_cols: 
+            ordinal_encoder = OrdinalEncoder() 
+            ordinal_encoder.fit(df[ordinal_cols]) 
+            df[ordinal_cols] = ordinal_encoder.transform(df[ordinal_cols])
+            encoders['ordinal'] = ordinal_encoder
+            
         with open(file_name, 'wb') as f: 
-            dill.dump(encoders, f)
+            dill.dump(encoders, f) 
+
 
     else: 
-        if os.path.exists(file_name):
-            
-            with open(file_name, 'rb') as f:
-                te = dill.load(f)
+        if os.path.exists(file_name): 
+            with open(file_name, 'rb') as f: 
+                encoders = dill.load(f) 
 
-
+            print(encoders) 
             # Transform the categorical columns 
-            for col in categorical_cols: 
-                method = encoding_methods.get(col) 
-                encoder = te.get(col) 
-                if encoder: 
-                    if method == 'target': 
-                        df[col] = encoder.transform(df[[col]]) 
-                    elif method == 'ordinal': 
-                        df[col] = encoder.transform(df[[col]])
+            if 'target' in encoders and target_cols: 
+                encoded_data = encoders['target'].transform(df[target_cols])
+                for i, col in enumerate(target_cols):
+                    df[col] = encoded_data[:, i]
+                
 
+            if 'ordinal' in encoders and ordinal_cols: 
+                df[ordinal_cols] = encoders['ordinal'].transform(df[ordinal_cols]) 
         else: 
             raise FileNotFoundError(f"Encoders file not found: {file_name}")
-        
-
+    
     return df
 
 
-with open('encode_data.pickle', 'wb') as f:
-    dill.dump(encode_data, f)
+with open("encode_data.pickle", 'wb') as f:
+    dill.dump(encode_data,f)
+
+
 
 # %%
 def transform_data(df, target):
     file_name ="powertransformer.pickle"
+
     if os.path.exists(file_name):
         with open(file_name, 'rb') as f:
             pt = dill.load(f)
@@ -189,8 +197,9 @@ def transform_data(df, target):
         yj_target = pt.transform(df[target].values.reshape(-1,1))
         df['transform_target'] = yj_target
     
+
     else:
-        pt = PowerTransformer(method='yeo-johnson')
+        pt = PowerTransformer(method='box-cox')
         pt.fit(df[target].values.reshape(-1,1))
 
         yj_target = pt.transform(df[target].values.reshape(-1,1))
@@ -202,15 +211,35 @@ def transform_data(df, target):
     return df
 
 
-with open('transform_data.pickle', 'wb') as f:
+with open('transformed_data.pickle', 'wb') as f:
     dill.dump(transform_data, f)
 
 # %%
-def train_model(model_class, xtrain, ytrain, **args):
-    model = model_class(**args)
-    model.fit(xtrain, ytrain)
+def train_model(model_class, xtrain, ytrain, param_grid={}, best_combination=False ,  **args):
+    
+    if best_combination == True:
 
-    return model
+        model = model_class(**args)
+
+        grid_search = GridSearchCV(estimator=model, param_grid=param_grid, cv=5, n_jobs=-1)
+        grid_search.fit(xtrain, xtrain)
+
+        best_model = grid_search.best_estimator_
+        best_model.fit(xtrain, xtrain)
+
+        return best_model
+    
+        with open('trained_model.pickle', 'wb') as f:
+            dill.dump(best_model, f)
+
+    else:
+        model = model_class(**args)
+        model.fit(xtrain, ytrain)
+
+        return model
+
+        with open('trained_model.pickle', 'wb') as f:
+            dill.dump(model, f)
 
 
 
@@ -234,8 +263,13 @@ def predict_model(df, model):
 
         if hasattr(pt, 'inverse_transform'): 
            try: 
-               y_new_pred = pt.inverse_transform(y_new_pred.reshape(-1, 1)).flatten() 
-               if np.isnan(y_new_pred).any(): 
+               if not np.any(np.isnan(y_new_pred)) and np.all(np.isfinite(y_new_pred)):
+                y_new_pred = pt.inverse_transform(y_new_pred.reshape(-1, 1)).flatten() 
+
+                with open('predicted_model.pickle', 'wb') as f:
+                    dill.dump(y_new_pred, f) 
+
+                if np.isnan(y_new_pred).any(): 
                     print("Inverse transform produced NaNs. Returning raw predictions.") 
                     y_new_pred = model.predict(df) 
            except Exception as e: 
