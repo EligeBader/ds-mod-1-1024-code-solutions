@@ -76,8 +76,11 @@ best_pdq
 np.exp(model.forecast(20))
 
 # %%
+aram = ARIMA(data_log, order = best_pdq).fit()
+
+# %%
 data.plot()
-fv_exp.plot()
+np.exp(aram.fittedvalues).plot()
 
 # %% [markdown]
 # ## Seasonality
