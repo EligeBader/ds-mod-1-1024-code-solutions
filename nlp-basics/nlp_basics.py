@@ -76,10 +76,11 @@ for desc_list in data['nlp_description']:
     for word in desc_list:
         stemmed_word = ps.stem(word)
         stemmed_desc.append(stemmed_word)
-    stemmed_tokens.append(stemmed_desc)
+    stemmed_tokens.append(" ".join(stemmed_desc))
 
-data['nlp_description'] = stemmed_tokens
-print(data[['description', 'nlp_description']].head())
+
+data['Cleaned_Stem_Description'] = stemmed_tokens
+print(data[['description', 'Cleaned_Stem_Description']].head())
 
 """Lemmatize the tokens"""
 
@@ -92,7 +93,41 @@ for desc_list in data['nlp_description']:
     for word in desc_list:
         lemmatized_word = wnl.lemmatize(word)
         lemmatized_desc.append(lemmatized_word)
-    lemmatized_tokens.append(lemmatized_desc)
+    lemmatized_tokens.append(" ".join(lemmatized_desc))
 
-data['nlp_description'] = lemmatized_tokens
-print(data[['description', 'nlp_description']].head())
+data['Cleaned_Lemma_Description'] = lemmatized_tokens
+print(data[['description', 'Cleaned_Lemma_Description']].head())
+
+"""Build a word cloud based on Cleaned_Lemma_Description"""
+
+type(data['Cleaned_Lemma_Description'])
+
+text = " ".join(data['Cleaned_Lemma_Description'])
+wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text)
+plt.figure(figsize=(10, 5))
+plt.imshow(wordcloud)
+
+"""## Sentiment Analysis"""
+
+from textblob import TextBlob
+!pip install vaderSentiment
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+
+analyzer = SentimentIntensityAnalyzer()
+
+data['TextBlob_Polarity'] = data['Cleaned_Lemma_Description'].apply(lambda x: TextBlob(x).sentiment.polarity)
+data['Vader_Compound'] = data['Cleaned_Lemma_Description'].apply(lambda x: analyzer.polarity_scores(x)['compound'])
+
+data[['TextBlob_Polarity', 'Vader_Compound']]
+
+data['Review_TB'] = data['TextBlob_Polarity'].apply(lambda x: 1 if x > 0.333 else -1 if x < -0.333 else 0)
+
+data['Review_TB']
+
+data['Review_Vader'] = data['Vader_Compound'].apply(lambda x: 1 if x > 0.333 else -1 if x < 0.333 else 0)
+
+data['Review_Vader']
+
+data['Cleaned_Lemma_Description'][129968]
+
+data
