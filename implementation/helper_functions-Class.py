@@ -7,7 +7,8 @@ import os
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import TargetEncoder
+from sklearn.preprocessing import TargetEncoder, OrdinalEncoder, OneHotEncoder
+import category_encoders as ce
 import imblearn
 from imblearn.under_sampling import RandomUnderSampler
 
@@ -105,11 +106,18 @@ def encode_data(df, target, categorical_cols, train, model):
                 mod = dill.load(f)
 
              # Transform the categorical columns 
-            tempvar = mod.transform(df[categorical_cols]) 
-    
-            # Update the original DataFrame with encoded values 
-            for i, col in enumerate(categorical_cols): 
-                df[col] = tempvar[:, i]
+            tempvar = mod.transform(df[categorical_cols])
+            print(type(df))
+            print(type(tempvar))
+
+            if model == TargetEncoder or model == OrdinalEncoder:
+                # Update the original DataFrame with encoded values 
+                for i, col in enumerate(categorical_cols): 
+                    df[col] = tempvar[:, i]
+            else:
+                df.drop(columns = categorical_cols, axis =1 , inplace=True)
+                df = pd.concat([df, tempvar], axis = 1)
+
 
     else:
 
@@ -122,13 +130,21 @@ def encode_data(df, target, categorical_cols, train, model):
 
         
         # Transform the categorical columns 
-        tempvar = mod.transform(df[categorical_cols]) 
+        tempvar = mod.transform(df[categorical_cols])
+        # print(type(df))
+        # print(type(tempvar))
         
-        # Update the original DataFrame with encoded values 
-        for i, col in enumerate(categorical_cols): 
-            df[col] = tempvar[:, i]
+        if model == TargetEncoder or model == OrdinalEncoder:
+            # Update the original DataFrame with encoded values 
+            for i, col in enumerate(categorical_cols): 
+                df[col] = tempvar[:, i]
+        else:
+            df.drop(columns = categorical_cols, axis =1 , inplace=True)
+            df = pd.concat([df, tempvar], axis = 1)
+            
+               
+                
         
-
         with open(file_name, 'wb') as f:
             dill.dump(mod, f)
 
@@ -141,16 +157,14 @@ with open('encode_data.pickle', 'wb') as f:
 # %%
 def scale_data(df, scaler, target=None, features_to_scale=None): 
     scal = scaler() 
-    if target == None:
-        if features_to_scale is None: 
+    if features_to_scale is None: 
+        if target == None:
             features_to_scale = df.columns
-            df[features_to_scale] = scal.fit_transform(df[features_to_scale]) 
-    else:
-        if features_to_scale is None: 
+        else:
             features_to_scale = df.drop(columns=target).columns
-            df[features_to_scale] = scal.fit_transform(df[features_to_scale]) 
+        
+    df[features_to_scale] = scal.fit_transform(df[features_to_scale]) 
 
-    
     return df 
 
 # Save the function using dill 
