@@ -12,14 +12,25 @@ Original file is located at
 # Commented out IPython magic to ensure Python compatibility.
 import pandas as pd
 import numpy as np
+import re
 import matplotlib.pyplot as plt
 !pip install nltk
 import nltk
 from nltk.tokenize import word_tokenize, sent_tokenize
+import spacy
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer, WordNetLemmatizer
 # %matplotlib inline
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+pd.set_option('display.max_colwidth', 200)
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
+from sklearn.metrics import classification_report, recall_score, accuracy_score
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import GridSearchCV
+import pickle
 
 """# Read File"""
 
@@ -29,16 +40,218 @@ spam_df.head()
 spam_df.drop(['Unnamed: 2', 'Unnamed: 3', 'Unnamed: 4'], axis=1, inplace=True)
 spam_df.head()
 
-"""## Tokenize"""
+spam_df.isna().sum()
+
+"""# Preprocessing
+
+## Tokenize
+"""
 
 nltk.download('punkt')
 nltk.download('punkt_tab')
 
 V2 = spam_df['v2']
+V2
 
-tok_V2 = []
-for i in V2:
-  words = word_tokenize(V2)
-  tok_V2.append(words)
+tok_v2 = []
+for v in V2:
+  words = word_tokenize(v)
+  tok_v2.append(words)
 
-spam_df['v2'] = tok_V2
+spam_df['prep_v2'] = tok_v2
+
+spam_df.head()
+
+spam_df.v2[15]
+
+"""## Remove Stop_words"""
+
+nltk.download('stopwords')
+
+stop_words = stopwords.words('english')
+stop_words.extend(['.', ',', '!', '?', '&', '..', '...', '', '*', '>', '<', '/', '\\', ':', ';'])
+
+# Add a regular expression to match HTTP links
+# link_pattern = re.compile(r'(http\S+|www\.\S+|\S+\.com)')
+
+v2_nosw = []
+for v2_list in spam_df['prep_v2']:
+    new_v2 = []
+    for word in v2_list:
+        if word.lower() not in stop_words:
+            new_v2.append(word)
+    v2_nosw.append(new_v2)
+
+spam_df['prep_v2'] = v2_nosw
+
+spam_df['prep_v2']
+
+"""## Lemmatize"""
+
+nltk.download('wordnet')
+wnl = WordNetLemmatizer()
+
+lemmatized_tokens = []
+for v2_list in spam_df['prep_v2']:
+    lemmatized_v2 = []
+    for word in v2_list:
+        lemmatized_word = wnl.lemmatize(word)
+        lemmatized_v2.append(lemmatized_word)
+    lemmatized_tokens.append(" ".join(lemmatized_v2))
+
+spam_df['prep_v2'] = lemmatized_tokens
+
+spam_df['prep_v2']
+
+"""# Vectorize"""
+
+tfidf = TfidfVectorizer(stop_words = 'english')
+tfidf.fit(spam_df['prep_v2'])
+
+tfidf.vocabulary_
+
+v2_tfidf = tfidf.transform(spam_df['prep_v2'])
+v2_tfidf
+
+# Explore v2_tfidf
+pd.DataFrame(v2_tfidf.todense(), columns = tfidf.get_feature_names_out())
+
+v2_tfidf.sum()
+
+# Split data into training and testing sets
+X = v2_tfidf
+y = spam_df['v1']
+
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+"""# LogisticRegression Model"""
+
+# Initialize and train a Logistic Regression model
+model = LogisticRegression()
+model.fit(X_train, y_train)
+
+# Make predictions on the test set
+train_pred = model.predict(X_train)
+test_pred = model.predict(X_test)
+
+
+print('Train Evaluation')
+print(classification_report(y_train, train_pred))
+
+
+print('Test Evaluation')
+print(classification_report(y_test, test_pred))
+
+"""# RandomForest Model"""
+
+# Initialize and train a Random Forest Classifier model
+model = RandomForestClassifier()
+model.fit(X_train, y_train)
+
+# Make predictions on the test set
+train_pred = model.predict(X_train)
+test_pred = model.predict(X_test)
+
+
+print('Train Evaluation')
+print(classification_report(y_train, train_pred))
+
+
+print('Test Evaluation')
+print(classification_report(y_test, test_pred))
+
+"""# XGBoost Model"""
+
+# Create a LabelEncoder object
+le = LabelEncoder()
+
+# Fit the encoder to your target variable and transform it
+y_train = le.fit_transform(y_train)
+y_test = le.transform(y_test)
+
+# Initialize and train an XGBoost Classifier model
+model = XGBClassifier()
+model.fit(X_train, y_train)
+
+# Make predictions on the test set
+train_pred = model.predict(X_train)
+test_pred = model.predict(X_test)
+
+# Inverse transform the predictions and actual labels
+# train_pred_inv = le.inverse_transform(train_pred)
+# test_pred_inv = le.inverse_transform(test_pred)
+# y_test_inv = le.inverse_transform(y_test)
+
+
+print('Train Evaluation')
+print(classification_report(y_train, train_pred))
+
+
+print('Test Evaluation')
+print(classification_report(y_test, test_pred))
+
+"""# Observation:
+
+- All three models show very high accuracy on the training set, indicating they've learned the training data well.
+- All three models show a little variance that can be improved by tuning hyperparameters
+
+# Comparative Analysis:
+- Detecting spam is crucial (minimizing false negatives), then the model with the highest recall for the "spam" class would be preferred.
+
+
+- Logistic Regression has the lowest recall for spam on the test set (0.60), which means it misses more spam messages compared to the other models.
+- Random Forest and XGBoost have higher recall on the test set for spam (0.82 and 0.83), indicating they are better at detecting spam and minimizing false negatives.
+
+- XGBoost has a slightly higher recall for spam on the train set, but Random Forest performs just a bit better on the test set.
+
+- Random Forest demonstrates the best ability to correctly identify spam messages, making it the better choice when minimizing false negatives is the primary concern.
+
+# Tune Hyperparameters
+"""
+
+param_grid = {
+    'n_estimators': [75, 100, 150],
+    'max_depth': [None, 5, 10],
+    'min_samples_split': [2, 4, 6],
+    'min_samples_leaf': [1, 2, 4]
+}
+
+
+model = RandomForestClassifier()
+
+# Perform GridSearchCV
+grid_search = GridSearchCV(estimator=model, param_grid=param_grid, cv=5, scoring='recall', n_jobs=-1)
+grid_search.fit(X_train, y_train)
+
+# Get the best model and its parameters
+best_model = grid_search.best_estimator_
+best_params = grid_search.best_params_
+
+best_model
+
+best_params
+
+with open('rf_model.pkl', 'wb') as file:
+    pickle.dump(best_model, file)
+
+with open('rf_model.pkl', 'rb') as file:
+   model = pickle.load(file)
+
+
+# Make predictions using the best model
+train_pred = model.predict(X_train)
+test_pred = model.predict(X_test)
+
+recall_score(y_test, test_pred)
+
+# comparing
+# Initialize and train a Random Forest Classifier model
+model = RandomForestClassifier()
+model.fit(X_train, y_train)
+
+# Make predictions on the test set
+train_pred = model.predict(X_train)
+test_pred = model.predict(X_test)
+
+print(recall_score(y_test, test_pred))
