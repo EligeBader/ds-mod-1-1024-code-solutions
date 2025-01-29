@@ -161,7 +161,7 @@ print(classification_report(y_train, train_pred))
 print('Test Evaluation')
 print(classification_report(y_test, test_pred))
 
-"""# XGBoost Model"""
+"""# XGBoost Model """
 
 # Create a LabelEncoder object
 le = LabelEncoder()
@@ -245,7 +245,7 @@ test_pred = model.predict(X_test)
 
 recall_score(y_test, test_pred)
 
-# comparing
+# Comparing
 # Initialize and train a Random Forest Classifier model
 model = RandomForestClassifier()
 model.fit(X_train, y_train)
