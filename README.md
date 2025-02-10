@@ -5,7 +5,6 @@ Data Preparation:
 I focused on cleaning, transforming, and preparing data for analysis. This involved handling missing values, normalizing data, and feature engineering to make the data analysis-ready.
 
 Data Analysis: 
-Supervised and Unsupervised Machine Learning
 I applied both supervised and unsupervised machine learning techniques to solve various problems. Projects in this category include:
 
 Classification: Implemented various classification algorithms using Scikit-Learn, PyTorch, and TensorFlow to predict categorical outcomes.
