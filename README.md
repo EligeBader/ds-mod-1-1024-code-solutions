@@ -1,6 +1,8 @@
-Data Collection:I utilized various methods and tools to gather data from diverse sources, ensuring the comprehensiveness and accuracy of the collected datasets.
+Data Collection: 
+I utilized various methods and tools to gather data from diverse sources, ensuring the comprehensiveness and accuracy of the collected datasets.
 
-Data Preparation: I focused on cleaning, transforming, and preparing data for analysis. This involved handling missing values, normalizing data, and feature engineering to make the data analysis-ready.
+Data Preparation: 
+I focused on cleaning, transforming, and preparing data for analysis. This involved handling missing values, normalizing data, and feature engineering to make the data analysis-ready.
 
 Data Analysis: 
 Supervised and Unsupervised Machine Learning
@@ -12,24 +14,24 @@ Linear Regression: Developed regression models to predict continuous outcomes. U
 
 Clustering: Applied clustering techniques, such as K-Means and Hierarchical Clustering, to group similar data points. Utilized Scikit-Learn and Pandas for clustering analysis.
 
-Deep Learning
+Deep Learning:
 Worked on deep learning projects that involved building and training neural networks. Leveraged frameworks like PyTorch and TensorFlow to create and optimize deep learning models.
 
-Time Series Analysis
+Time Series Analysis:
 Analyzed time series data to forecast future trends and patterns. Used techniques such as ARIMA and LSTM models for time series forecasting.
 
 Tools and Technologies:
-Python
-Scikit-Learn
-Pandas
-SQL
-XGBoost
-Matplotlib
-Seaborn
-PyTorch
-TensorFlow
-Pyspark
-Classification
-Linear Regression
-Clustering
-Dimensionality Reduction
+Python |
+Scikit-Learn |
+Pandas |
+SQL |
+XGBoost |
+Matplotlib |
+Seaborn |
+PyTorch |
+TensorFlow |
+Pyspark |
+Classification |
+Linear Regression |
+Clustering |
+Dimensionality Reduction 
